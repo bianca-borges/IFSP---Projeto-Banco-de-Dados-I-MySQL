@@ -1,0 +1,565 @@
+CREATE DATABASE charge_next;
+USE charge_next;
+
+CREATE TABLE cliente (
+	cod_cliente int,
+    primeiro_nome varchar(30) not null,
+    sobrenome varchar(30) not null,
+    sexo varchar(1),
+    log varchar(40),
+    cep int not null,
+    cidade varchar(30),
+    estado varchar(20),
+    pais varchar(50),
+    PRIMARY KEY (cod_cliente)
+);
+
+CREATE TABLE telefone(
+	operadora varchar(10),
+	ddd varchar(2) not null,
+    fone varchar(10) not null,
+    codigo_cliente int,
+    PRIMARY KEY (ddd, fone),
+    FOREIGN KEY(codigo_cliente) REFERENCES cliente(cod_cliente)  on delete cascade
+);
+
+CREATE TABLE cliente_email(
+	email varchar(255) not null,
+    codigo_cliente int,
+    FOREIGN KEY (codigo_cliente) REFERENCES cliente(cod_cliente)  on delete cascade,
+    PRIMARY KEY (codigo_cliente, email)
+);
+
+CREATE TABLE cliente_fisico(
+	cpf varchar(11),
+    sexo char(1),
+    codigo_cliente int,
+    PRIMARY KEY (cpf),
+    FOREIGN KEY (codigo_cliente) REFERENCES cliente(cod_cliente) on delete cascade, 
+    CHECK (sexo in ('M','F','m','f'))
+);
+
+CREATE TABLE cliente_juridico(
+	cnpj int,
+    nome_fantasia varchar(255),
+    tipo_negocio varchar(100),
+    codigo_cliente int,
+    PRIMARY KEY (cnpj),
+    FOREIGN KEY (codigo_cliente) REFERENCES cliente(cod_cliente) on delete cascade
+);
+
+CREATE TABLE plano(
+	cod_plano varchar(25) not null,
+    nome varchar(20) not null,
+    nome_desconto varchar(25),
+    descricao varchar(255),
+    plano_status varchar(10),
+    PRIMARY KEY(cod_plano)
+);
+
+CREATE TABLE lista_ddd(
+	ddd varchar(255) not null,
+    codigo_plano varchar(25),
+    FOREIGN KEY (codigo_plano) REFERENCES plano(cod_plano) on delete cascade,
+    PRIMARY KEY (codigo_plano, ddd)
+);
+
+CREATE TABLE desconto(
+	nome varchar(30) not null,
+    desc_desconto varchar(50),
+    codigo_plano varchar(25),
+    PRIMARY KEY(nome, codigo_plano),
+    FOREIGN KEY (codigo_plano) REFERENCES plano(cod_plano) on delete cascade
+); 
+
+CREATE TABLE assinatura(
+	cod_assinatura varchar(10) not null,
+    data_efetividade datetime,
+    data_expiracao datetime,
+    descricao_assinatura varchar(50),
+    codigo_plano varchar(25),
+    ddd_cliente varchar(2),
+    terminal_cliente varchar(10),
+    codigo_barras int,
+    PRIMARY KEY(cod_assinatura),
+    FOREIGN KEY (codigo_plano) REFERENCES plano(cod_plano) on delete cascade,
+    FOREIGN KEY(ddd_cliente, terminal_cliente) REFERENCES telefone(ddd, fone) on delete cascade
+);
+
+CREATE TABLE fatura(
+	cod_barras int,
+    data_fechamento datetime,
+    codigo_assinatura varchar(10),
+    codigo_pagamento int,
+    ciclo int,
+    PRIMARY KEY(cod_barras),
+    FOREIGN KEY (codigo_assinatura) REFERENCES assinatura(cod_assinatura) on delete cascade
+);
+
+ALTER TABLE assinatura ADD CONSTRAINT ASSINATURA_FAT_FK
+FOREIGN KEY(codigo_barras) REFERENCES fatura(cod_barras);
+
+CREATE TABLE detalhe(
+	data_detalhe timestamp not null default current_timestamp,
+    serviço varchar(255),
+    valor_unitario int,
+    qte_servico int,
+    codigo_barras int,
+    PRIMARY KEY (data_detalhe,codigo_barras),
+    FOREIGN KEY (codigo_barras) REFERENCES fatura(cod_barras) on delete cascade
+);
+
+CREATE TABLE forma_pagamento(
+	cod_pagamento int,
+    automatico char(1),
+    pgto_status varchar(10),
+    PRIMARY KEY(cod_pagamento),
+    CHECK (automatico in ('S','s','N','n'))
+);
+
+ALTER TABLE fatura ADD CONSTRAINT FAT_PGT_FK
+FOREIGN KEY(codigo_pagamento) REFERENCES forma_pagamento(cod_pagamento);
+
+ALTER TABLE cliente
+DROP COLUMN sexo;
+
+ALTER TABLE cliente
+ADD  COLUMN nro_residencia varchar(5);
+
+ALTER TABLE telefone
+DROP COLUMN operadora;
+
+ALTER TABLE telefone
+ADD  COLUMN cod_pais varchar(2) not null;
+
+ALTER TABLE cliente_email
+ADD  COLUMN dominio varchar(25);
+
+ALTER TABLE cliente_email
+DROP COLUMN dominio;
+
+ALTER TABLE cliente_fisico
+ADD  COLUMN idade varchar(3);
+
+ALTER TABLE cliente_fisico
+DROP COLUMN idade;
+
+ALTER TABLE cliente_juridico
+ADD  COLUMN razao_social varchar(255);
+
+ALTER TABLE cliente_juridico
+DROP COLUMN tipo_negocio;
+
+ALTER TABLE plano
+ADD  COLUMN tipo_plano varchar(10) not null;
+
+ALTER TABLE plano
+DROP COLUMN nome_desconto;
+
+ALTER TABLE plano
+ADD  COLUMN tel_ativo varchar(1);
+
+ALTER TABLE plano
+DROP COLUMN tel_ativo;
+
+ALTER TABLE desconto
+ADD  COLUMN valor_desconto decimal(3,2);
+
+ALTER TABLE desconto
+DROP COLUMN desc_desconto;
+
+ALTER TABLE assinatura
+ADD  COLUMN status_assinatura varchar(10);
+
+ALTER TABLE assinatura
+DROP COLUMN descricao_assinatura;
+
+ALTER TABLE fatura
+ADD  COLUMN data_vencimento datetime;
+
+ALTER TABLE fatura
+DROP COLUMN ciclo;
+
+ALTER TABLE detalhe
+ADD  COLUMN detalhe_desc varchar(255);
+
+ALTER TABLE detalhe
+DROP COLUMN qte_servico;
+
+ALTER TABLE forma_pagamento
+ADD  COLUMN tipo_pagamento varchar(30);
+
+ALTER TABLE forma_pagamento
+DROP COLUMN pgto_status;
+
+ALTER TABLE cliente
+MODIFY COLUMN cep varchar(10);
+
+ALTER TABLE detalhe
+MODIFY COLUMN valor_unitario decimal(9,2);
+
+ALTER TABLE cliente_juridico
+MODIFY COLUMN cnpj varchar(20);
+
+
+INSERT INTO cliente (cod_cliente, primeiro_nome, sobrenome, log, nro_residencia, cep, cidade, estado, pais) 
+VALUES ('1', 'João', 'Gomes', 'Rodovia PB 111 6 Quilômetro 6', 334, '58233-971', 'Araruna', 'PB', 'Brasil');
+INSERT INTO cliente (cod_cliente, primeiro_nome, sobrenome, log, nro_residencia, cep, cidade, estado, pais) 
+VALUES('2', 'Lucia', 'Santos', 'Rua Marechal Deodoro', 218, '17240-970', 'Bocaina', 'SP', 'Brasil');
+INSERT INTO cliente (cod_cliente, primeiro_nome, sobrenome, log, nro_residencia, cep, cidade, estado, pais) 
+VALUES('3', 'Amanda', 'Prado', 'Avenida Souzânia', 556, '75053-425', 'Anapolis', 'GO', 'Brasil');
+INSERT INTO cliente (cod_cliente, primeiro_nome, sobrenome, log, nro_residencia, cep, cidade, estado, pais) 
+VALUES('4', 'Carlos', 'Custodio', 'Rua Maringá', 21, '75064-680', 'Anapolis', 'GO', 'Brasil');
+INSERT INTO cliente (cod_cliente, primeiro_nome, sobrenome, log, nro_residencia, cep, cidade, estado, pais) 
+VALUES('5', 'Lucas', 'Luz', 'Rua Canal', 126, '96407-380', 'Buenos Aires', 'BA', 'Argentina');
+INSERT INTO cliente (cod_cliente, primeiro_nome, sobrenome, log, nro_residencia, cep, cidade, estado, pais) 
+VALUES('6', 'Julia', 'Amaro', 'Avenida Rio Negro', 458, '69736-970', 'Balbina', 'AM', 'Brasil');
+INSERT INTO cliente (cod_cliente, primeiro_nome, sobrenome, log, nro_residencia, cep, cidade, estado, pais) 
+VALUES('7', 'Zuleide', 'Bernardes', 'Rua X', 365, '24809-084', 'Itaborai', 'RJ', 'Brasil');
+INSERT INTO cliente (cod_cliente, primeiro_nome, sobrenome, log, nro_residencia, cep, cidade, estado, pais) 
+VALUES('8', 'Bruna', 'Oliveira', 'Rua Quinze de Novembro', null, '25931-310', 'Buenos Aires', 'BA', 'Argentina');
+INSERT INTO cliente (cod_cliente, primeiro_nome, sobrenome, log, nro_residencia, cep, cidade, estado, pais) 
+VALUES('9', 'Tenorio', 'Chagas', 'Rua Annuncio Cammarosano', 23, '17055-220', 'Bauru', 'SP', 'Brasil');
+INSERT INTO cliente (cod_cliente, primeiro_nome, sobrenome, log, nro_residencia, cep, cidade, estado, pais) 
+VALUES('10', 'Bianca', 'Borges', 'Quadra QR 1031 Conjunto 1', null, '72339-031', 'Brasilia', 'DF', 'Brasil');
+INSERT INTO cliente (cod_cliente, primeiro_nome, sobrenome, log, nro_residencia, cep, cidade, estado, pais) 
+VALUES('11', 'Lucas', 'Bomfim', 'Rua 32', 965, '17055-110', 'Araraquara', null, 'Brasil');
+INSERT INTO cliente (cod_cliente, primeiro_nome, sobrenome, log, nro_residencia, cep, cidade, estado, pais) 
+VALUES('12', 'Camila', 'Ravelo', 'Quadra 25', 254, '72339-101', 'Brasilia', null, 'Brasil');
+INSERT INTO cliente (cod_cliente, primeiro_nome, sobrenome, log, nro_residencia, cep, cidade, estado, pais) 
+VALUES('13', 'Maria', 'Oliveira', 'Rua  225', 78, '72350-771', 'Lima', 'LM', 'Peru');
+INSERT INTO cliente (cod_cliente, primeiro_nome, sobrenome, log, nro_residencia, cep, cidade, estado, pais) 
+VALUES('14', 'Suely', 'de Souza', 'Rua  Caldas', 109, '14940-771', 'Ibitinga', 'SP', 'Brasil');
+INSERT INTO cliente (cod_cliente, primeiro_nome, sobrenome, log, nro_residencia, cep, cidade, estado, pais) 
+VALUES('15', 'Luiz Inacio', 'Lula', 'Rua  13', 13, '13940-133', 'Sao Bernardo', 'SP', 'Brasil');
+INSERT INTO cliente (cod_cliente, primeiro_nome, sobrenome, log, nro_residencia, cep, cidade, estado, pais) 
+VALUES('16', 'Geraldo', 'Alckmin', 'Rua  40', 40, '14400-400', 'Sao Paulo', 'SP', 'Brasil');
+INSERT INTO cliente (cod_cliente, primeiro_nome, sobrenome, log, nro_residencia, cep, cidade, estado, pais) 
+VALUES('17', 'Marisa', 'Leticia', 'Rua 89', 789, '13401-412', 'Sao Bernardo', 'SP', 'Brasil');
+INSERT INTO cliente (cod_cliente, primeiro_nome, sobrenome, log, nro_residencia, cep, cidade, estado, pais) 
+VALUES('18', 'Nataly', 'Borges', 'Rua Antonio', 2000, '14948-489', 'Sao Luis', 'MA', 'Brasil');
+INSERT INTO cliente (cod_cliente, primeiro_nome, sobrenome, log, nro_residencia, cep, cidade, estado, pais) 
+VALUES('19', 'Pepe', 'Mujica', 'Rua do Pepe', 3333, '14000-001', 'Montevideu', 'MV', 'Uruguai');
+INSERT INTO cliente (cod_cliente, primeiro_nome, sobrenome, log, nro_residencia, cep, cidade, estado, pais) 
+VALUES('20', 'Alberto', 'Fernandez', 'Rua Presidente', 789, '19888-458', 'Buenos Aires', 'BA', 'Argentina');
+INSERT INTO cliente (cod_cliente, primeiro_nome, sobrenome, log, nro_residencia, cep, cidade, estado, pais) 
+VALUES('21', 'Anderson', 'Mendez', 'Rua 85', 45, '19008-000', 'Buenos Aires', 'BA', 'Argentina');
+
+INSERT INTO telefone (cod_pais, ddd, fone, codigo_cliente) VALUES('55', '83', '995045752', '1');
+INSERT INTO telefone (cod_pais, ddd, fone, codigo_cliente) VALUES('55', '53', '992401212', '2');
+INSERT INTO telefone (cod_pais, ddd, fone, codigo_cliente) VALUES('55', '92', '985423564', '3');
+INSERT INTO telefone (cod_pais, ddd, fone, codigo_cliente) VALUES('55', '21', '995220478', '4');
+INSERT INTO telefone (cod_pais, ddd, fone, codigo_cliente) VALUES('54', '21', '983216420', '5');
+INSERT INTO telefone (cod_pais, ddd, fone, codigo_cliente) VALUES('55', '14', '983496640', '6');
+INSERT INTO telefone (cod_pais, ddd, fone, codigo_cliente) VALUES('55', '61', '981867304', '7');
+INSERT INTO telefone (cod_pais, ddd, fone, codigo_cliente) VALUES('54', '11', '986020831', '8');
+INSERT INTO telefone (cod_pais, ddd, fone, codigo_cliente) VALUES('55', '11', '991392087', '9');
+INSERT INTO telefone (cod_pais, ddd, fone, codigo_cliente) VALUES('55', '92', '997976380', '10');
+INSERT INTO telefone (cod_pais, ddd, fone, codigo_cliente) VALUES('55', '75', '996371514', '11');
+INSERT INTO telefone (cod_pais, ddd, fone, codigo_cliente) VALUES('55', '55', '996262629', '12');
+INSERT INTO telefone (cod_pais, ddd, fone, codigo_cliente) VALUES('51', '27', '996584563', '13');
+INSERT INTO telefone (cod_pais, ddd, fone, codigo_cliente) VALUES('55', '16', '996366744', '14');
+INSERT INTO telefone (cod_pais, ddd, fone, codigo_cliente) VALUES('55', '11', '991311313', '15');
+INSERT INTO telefone (cod_pais, ddd, fone, codigo_cliente) VALUES('55', '11', '994404040', '16');
+INSERT INTO telefone (cod_pais, ddd, fone, codigo_cliente) VALUES('55', '11', '993131331', '17');
+INSERT INTO telefone (cod_pais, ddd, fone, codigo_cliente) VALUES('55', '98', '989657141', '18');
+INSERT INTO telefone (cod_pais, ddd, fone, codigo_cliente) VALUES('59', '48', '989657141', '19');
+INSERT INTO telefone (cod_pais, ddd, fone, codigo_cliente) VALUES('54', '11', '985621547', '20');
+INSERT INTO telefone (cod_pais, ddd, fone, codigo_cliente) VALUES('54', '12', '985621895', '21');
+
+INSERT INTO cliente_email (email, codigo_cliente) VALUES('email01@yahoo.com', '1');
+INSERT INTO cliente_email (email, codigo_cliente) VALUES('email02@yahoo.com', '2');
+INSERT INTO cliente_email (email, codigo_cliente) VALUES('email03@yahoo.com', '3');
+INSERT INTO cliente_email (email, codigo_cliente) VALUES('email04@hotmail.com', '4');
+INSERT INTO cliente_email (email, codigo_cliente) VALUES('email05@gmail.com', '5');
+INSERT INTO cliente_email (email, codigo_cliente) VALUES('email06@gmail.com', '6');
+INSERT INTO cliente_email (email, codigo_cliente) VALUES('email07@outlook.com', '7');
+INSERT INTO cliente_email (email, codigo_cliente) VALUES('email08@outlook.com', '8');
+INSERT INTO cliente_email (email, codigo_cliente) VALUES('email09@outlook.com', '9');
+INSERT INTO cliente_email (email, codigo_cliente) VALUES('email10@outlook.com', '10');
+INSERT INTO cliente_email (email, codigo_cliente) VALUES('email11@outlook.com', '11');
+INSERT INTO cliente_email (email, codigo_cliente) VALUES('email12@outlook.com', '12');
+INSERT INTO cliente_email (email, codigo_cliente) VALUES('email13@outlook.com', '13');
+INSERT INTO cliente_email (email, codigo_cliente) VALUES('email14@outlook.com', '14');
+INSERT INTO cliente_email (email, codigo_cliente) VALUES('email15@outlook.com', '15');
+INSERT INTO cliente_email (email, codigo_cliente) VALUES('email16@outlook.com', '16');
+INSERT INTO cliente_email (email, codigo_cliente) VALUES('email17@outlook.com', '17');
+INSERT INTO cliente_email (email, codigo_cliente) VALUES('email18@outlook.com', '18');
+INSERT INTO cliente_email (email, codigo_cliente) VALUES('email19@outlook.com', '19');
+INSERT INTO cliente_email (email, codigo_cliente) VALUES('email20@outlook.com', '20');
+INSERT INTO cliente_email (email, codigo_cliente) VALUES('email21@outlook.com', '21');
+
+INSERT INTO cliente_fisico (cpf, sexo, codigo_cliente) VALUES('36576243847', 'M', '1');
+INSERT INTO cliente_fisico (cpf, sexo, codigo_cliente) VALUES('24263382455', 'F', '2');
+INSERT INTO cliente_fisico (cpf, sexo, codigo_cliente) VALUES('46786366503', 'F', '3');
+INSERT INTO cliente_fisico (cpf, sexo, codigo_cliente) VALUES('27132220012', 'M', '4');
+INSERT INTO cliente_fisico (cpf, sexo, codigo_cliente) VALUES('11016603509', 'M', '5');
+INSERT INTO cliente_fisico (cpf, sexo, codigo_cliente) VALUES('27132220036', null, '6');
+INSERT INTO cliente_fisico (cpf, sexo, codigo_cliente) VALUES('11016603599', null, '7');
+INSERT INTO cliente_fisico (cpf, sexo, codigo_cliente) VALUES('56894562158', 'F', '8');
+INSERT INTO cliente_fisico (cpf, sexo, codigo_cliente) VALUES('65238974521', 'M', '9');
+INSERT INTO cliente_fisico (cpf, sexo, codigo_cliente) VALUES('36214589654', 'F', '10');
+
+INSERT INTO cliente_juridico (cnpj, nome_fantasia, razao_social, codigo_cliente) VALUES ('77745761000105', 'Ferramentas Brasil', 'Ferramentas LTDA', '11');
+INSERT INTO cliente_juridico (cnpj, nome_fantasia, razao_social, codigo_cliente) VALUES ('52513701000128', 'Fulano Aviamentos', 'Fulano Alguem B', '12');
+INSERT INTO cliente_juridico (cnpj, nome_fantasia, razao_social, codigo_cliente) VALUES ('63337005000124', 'Casa das Flores', 'Flores LTDA', '13');
+INSERT INTO cliente_juridico (cnpj, nome_fantasia, razao_social, codigo_cliente) VALUES ('65829568000165', 'Bar do Ze', 'Bar do Brasil', '14');
+INSERT INTO cliente_juridico (cnpj, nome_fantasia, razao_social, codigo_cliente) VALUES ('12456898000100', 'Amdocs Brasil', 'Amdocs Ltda', '15');
+INSERT INTO cliente_juridico (cnpj, nome_fantasia, razao_social, codigo_cliente) VALUES ('77382557000185', 'Funeraria Funeral', 'Funeral Ltda', '16');
+INSERT INTO cliente_juridico (cnpj, nome_fantasia, razao_social, codigo_cliente) VALUES ('77382557000177', 'Padaria Pao', 'Padaria SP', '17');
+INSERT INTO cliente_juridico (cnpj, nome_fantasia, razao_social, codigo_cliente) VALUES ('65326584000188', 'Shopping Mall', 'Shopping Ltda', '18');
+INSERT INTO cliente_juridico (cnpj, nome_fantasia, razao_social, codigo_cliente) VALUES ('35416852000199', 'Zona Games', 'Games Ltda', '19');
+INSERT INTO cliente_juridico (cnpj, nome_fantasia, razao_social, codigo_cliente) VALUES ('68974523000111', 'Mercado Brasil', 'Mercado Brasil Ltda', '20');
+INSERT INTO cliente_juridico (cnpj, nome_fantasia, razao_social, codigo_cliente) VALUES ('78974523000023', 'Mercado Brasileiro', 'Mercado Mercantil Ltda', '21');
+
+INSERT INTO plano (cod_plano, nome, tipo_plano, descricao, plano_status) 
+VALUES ('pln_crtl5GB', 'Plano Controle 5GB', 'Internet', 'Plano de internet 5GB', 'ativo');
+INSERT INTO plano (cod_plano, nome, tipo_plano, descricao, plano_status) 
+VALUES ('pln_epctv', 'Plano EPCTV', 'TV', 'Plano de tv EPCTV', 'ativo');
+INSERT INTO plano (cod_plano, nome, tipo_plano, descricao, plano_status) 
+VALUES ('pln_fam100GB', 'Plano Familia 100GB', 'Internet', 'Plano de internet 100GB', 'ativo');
+INSERT INTO plano (cod_plano, nome, tipo_plano, descricao, plano_status) 
+VALUES ('pln_int12GB', 'Plano Internet 12GB', 'Internet', 'Plano de internet 12GB', 'ativo');
+INSERT INTO plano (cod_plano, nome, tipo_plano, descricao, plano_status) 
+VALUES ('pln_totvoz', 'Plano Total Voz', 'Voz', 'Plano de Voz', 'ativo');
+INSERT INTO plano (cod_plano, nome, tipo_plano, descricao, plano_status) 
+VALUES ('pln_roaming', 'Plano Roaming', 'Roaming', 'Plano de Roaming', 'ativo');
+INSERT INTO plano (cod_plano, nome, tipo_plano, descricao, plano_status) 
+VALUES ('pln_roaming02', 'Plano Roaming 02', 'Roaming', 'Plano de Roaming', 'ativo');
+INSERT INTO plano (cod_plano, nome, tipo_plano, descricao, plano_status) 
+VALUES ('pln_int50GB', 'Plano Internet 50GB', 'Internet', 'Plano de Internet', 'ativo');
+INSERT INTO plano (cod_plano, nome, tipo_plano, descricao, plano_status) 
+VALUES ('pln_int70GB', 'Plano Internet 70GB', 'Internet', 'Plano de Internet', 'ativo');
+INSERT INTO plano (cod_plano, nome, tipo_plano, descricao, plano_status) 
+VALUES ('pln_int90GB', 'Plano Internet 90GB', 'Internet', 'Plano de Internet', 'ativo');
+INSERT INTO plano (cod_plano, nome, tipo_plano, descricao, plano_status) 
+VALUES ('pln_int25GB', 'Plano Internet 25GB', 'Internet', 'Plano de Internet', 'ativo');
+INSERT INTO plano (cod_plano, nome, tipo_plano, descricao, plano_status) 
+VALUES ('pln_int300GB', 'Plano Internet 300GB', 'Internet', 'Plano de Internet', 'ativo');
+
+INSERT INTO lista_ddd (ddd, codigo_plano) VALUES('11;21;14;16', 'pln_crtl5GB');
+INSERT INTO lista_ddd (ddd, codigo_plano) VALUES('11;21;14;16;92;61', 'pln_totvoz');
+INSERT INTO lista_ddd (ddd, codigo_plano) VALUES('11;21;14;16;83;53', 'pln_fam100GB');
+INSERT INTO lista_ddd (ddd, codigo_plano) VALUES('11;21;14;53', 'pln_int12GB');
+INSERT INTO lista_ddd (ddd, codigo_plano) VALUES('11;21;14;16;92', 'pln_epctv');
+INSERT INTO lista_ddd (ddd, codigo_plano) VALUES('11;21;14;16;92', 'pln_roaming');
+INSERT INTO lista_ddd (ddd, codigo_plano) VALUES('11;21;14;16;92', 'pln_roaming02');
+INSERT INTO lista_ddd (ddd, codigo_plano) VALUES('11;21;14;16;92', 'pln_int50GB');
+INSERT INTO lista_ddd (ddd, codigo_plano) VALUES('11;21;14;16;92', 'pln_int70GB');
+INSERT INTO lista_ddd (ddd, codigo_plano) VALUES('11;21;14;16;92', 'pln_int90GB');
+INSERT INTO lista_ddd (ddd, codigo_plano) VALUES('11;21;14;16;92', 'pln_int25GB');
+INSERT INTO lista_ddd (ddd, codigo_plano) VALUES('11;21;14;16;92', 'pln_int300GB');
+
+INSERT INTO desconto (nome, valor_desconto, codigo_plano) VALUES ('Desconto 07', 5.99, 'pln_crtl5GB');
+INSERT INTO desconto (nome, valor_desconto, codigo_plano) VALUES ('Desconto 02', 8.98, 'pln_totvoz');
+INSERT INTO desconto (nome, valor_desconto, codigo_plano) VALUES ('Desconto 01', 5.99, 'pln_fam100GB');
+INSERT INTO desconto (nome, valor_desconto, codigo_plano) VALUES ('Desconto 04', 7.99, 'pln_int12GB');
+INSERT INTO desconto (nome, valor_desconto, codigo_plano) VALUES ('Desconto 04', null, 'pln_epctv');
+INSERT INTO desconto (nome, valor_desconto, codigo_plano) VALUES ('Desconto 01', 5.99, 'pln_roaming02');
+INSERT INTO desconto (nome, valor_desconto, codigo_plano) VALUES ('Desconto 07', 5.99, 'pln_int50GB');
+INSERT INTO desconto (nome, valor_desconto, codigo_plano) VALUES ('Desconto 07', 5.99, 'pln_int70GB');
+INSERT INTO desconto (nome, valor_desconto, codigo_plano) VALUES ('Desconto 02', 8.98, 'pln_int90GB');
+INSERT INTO desconto (nome, valor_desconto, codigo_plano) VALUES ('Desconto 07', 5.99, 'pln_int25GB');
+INSERT INTO desconto (nome, valor_desconto, codigo_plano) VALUES ('Desconto 07', 5.99, 'pln_int300GB');
+
+INSERT INTO assinatura (cod_assinatura, data_efetividade, data_expiracao, status_assinatura, codigo_plano, ddd_cliente, terminal_cliente) 
+VALUES('abc', '2022-10-04 23:59:59', '2023-10-04 23:59:59', 'ativa', 'pln_crtl5GB', '83', '995045752');
+INSERT INTO assinatura (cod_assinatura, data_efetividade, data_expiracao, status_assinatura, codigo_plano, ddd_cliente, terminal_cliente) 
+VALUES('abcd', '2022-10-04 23:59:59', '2023-10-04 23:59:59', 'ativa', 'pln_totvoz', '53', '992401212');
+INSERT INTO assinatura (cod_assinatura, data_efetividade, data_expiracao, status_assinatura, codigo_plano, ddd_cliente, terminal_cliente) 
+VALUES('abcdr', '2022-10-04 23:59:59', '2023-10-04 23:59:59', 'ativa', 'pln_totvoz', '92', '985423564');
+INSERT INTO assinatura (cod_assinatura, data_efetividade, data_expiracao, status_assinatura, codigo_plano, ddd_cliente, terminal_cliente) 
+VALUES('abcde', '2022-10-04 23:59:59', '2023-10-04 23:59:59', 'ativa', 'pln_fam100GB', '21', '995220478');
+INSERT INTO assinatura (cod_assinatura, data_efetividade, data_expiracao, status_assinatura, codigo_plano, ddd_cliente, terminal_cliente) 
+VALUES('abcdey', '2022-10-04 23:59:59', '2023-10-04 23:59:59', 'ativa', 'pln_int12GB', '21', '983216420');
+INSERT INTO assinatura (cod_assinatura, data_efetividade, data_expiracao, status_assinatura, codigo_plano, ddd_cliente, terminal_cliente) 
+VALUES('abcdef', '2022-10-04 23:59:59', '2023-10-04 23:59:59', 'ativa', 'pln_epctv', '14', '983496640');
+INSERT INTO assinatura (cod_assinatura, data_efetividade, data_expiracao, status_assinatura, codigo_plano, ddd_cliente, terminal_cliente) 
+VALUES('fabg', '2022-10-04 23:59:59', '2023-10-04 23:59:59', 'ativa', 'pln_epctv', '61', '981867304');
+INSERT INTO assinatura (cod_assinatura, data_efetividade, data_expiracao, status_assinatura, codigo_plano, ddd_cliente, terminal_cliente) 
+VALUES('hjkl', '2022-10-04 23:59:59', '2023-10-04 23:59:59', 'ativa', 'pln_int12GB', '11', '986020831');
+INSERT INTO assinatura (cod_assinatura, data_efetividade, data_expiracao, status_assinatura, codigo_plano, ddd_cliente, terminal_cliente) 
+VALUES('abder', '2022-10-04 23:59:59', '2023-10-04 23:59:59', 'ativa', 'pln_fam100GB', '11', '991392087');
+INSERT INTO assinatura (cod_assinatura, data_efetividade, data_expiracao, status_assinatura, codigo_plano, ddd_cliente, terminal_cliente) 
+VALUES('plbk', '2022-10-04 23:59:59', '2023-10-04 23:59:59', 'ativa', 'pln_crtl5GB', '92', '997976380');
+
+INSERT INTO fatura (cod_barras, data_fechamento, data_vencimento, codigo_assinatura) 
+VALUES ('102030', '2022-10-24', '2022-11-05', 'abc');
+INSERT INTO fatura (cod_barras, data_fechamento, data_vencimento, codigo_assinatura) 
+VALUES ('10203021', '2022-10-24', '2022-11-05', 'abcd');
+INSERT INTO fatura (cod_barras, data_fechamento, data_vencimento, codigo_assinatura) 
+VALUES ('1020302541', '2022-10-24', '2022-11-05', 'abcdr');
+INSERT INTO fatura (cod_barras, data_fechamento, data_vencimento, codigo_assinatura) 
+VALUES ('178302541', '2022-10-24', '2022-11-05', 'abcde');
+INSERT INTO fatura (cod_barras, data_fechamento, data_vencimento, codigo_assinatura) 
+VALUES ('178378541', '2022-10-24', '2022-11-05', 'abcdey');
+INSERT INTO fatura (cod_barras, data_fechamento, data_vencimento, codigo_assinatura) 
+VALUES ('178378941', '2022-10-24', '2022-11-05', 'abcdef');
+INSERT INTO fatura (cod_barras, data_fechamento, data_vencimento, codigo_assinatura) 
+VALUES ('178300041', '2022-10-24', '2022-11-05', 'fabg');
+INSERT INTO fatura (cod_barras, data_fechamento, data_vencimento, codigo_assinatura) 
+VALUES ('1780000041', '2022-10-24', '2022-11-05', 'abder');
+INSERT INTO fatura (cod_barras, data_fechamento, data_vencimento, codigo_assinatura) 
+VALUES ('17837845', '2022-10-24', '2022-11-05', 'hjkl');
+INSERT INTO fatura (cod_barras, data_fechamento, data_vencimento, codigo_assinatura) 
+VALUES ('1783740000', '2022-10-24', '2022-11-05', 'plbk');
+
+UPDATE assinatura SET codigo_barras = '102030' WHERE cod_assinatura = 'abc';
+UPDATE assinatura SET codigo_barras = '10203021' WHERE cod_assinatura = 'abcd';
+UPDATE assinatura SET codigo_barras = '1020302541' WHERE cod_assinatura = 'abcdr';
+UPDATE assinatura SET codigo_barras = '178302541' WHERE cod_assinatura = 'abcde';
+UPDATE assinatura SET codigo_barras = '178378541' WHERE cod_assinatura = 'abcdey';
+UPDATE assinatura SET codigo_barras = '178378941' WHERE cod_assinatura = 'abcdef';
+UPDATE assinatura SET codigo_barras = '178300041' WHERE cod_assinatura = 'fabg';
+UPDATE assinatura SET codigo_barras = '1780000041' WHERE cod_assinatura = 'abder';
+UPDATE assinatura SET codigo_barras = '17837845' WHERE cod_assinatura = 'hjkl';
+UPDATE assinatura SET codigo_barras = '1783740000' WHERE cod_assinatura = 'plbk';
+
+INSERT INTO detalhe (data_detalhe, serviço, detalhe_desc, valor_unitario, codigo_barras) 
+VALUES (current_time(), 'Internet', 'servico de internet disponivel para cliente', '55.90', '102030');
+INSERT INTO detalhe (data_detalhe, serviço, detalhe_desc, valor_unitario, codigo_barras) 
+VALUES (current_time(), 'Voz', 'servico de voz disponivel para cliente', '14.99', '10203021');
+INSERT INTO detalhe (data_detalhe, serviço, detalhe_desc, valor_unitario, codigo_barras) 
+VALUES (current_time(), 'Voz', 'servico de voz disponivel para cliente', '16.90', '1020302541');
+INSERT INTO detalhe (data_detalhe, serviço, detalhe_desc, valor_unitario, codigo_barras) 
+VALUES (current_time(), 'Internet', 'servico de internet disponivel para cliente', '152.45', '178302541');
+INSERT INTO detalhe (data_detalhe, serviço, detalhe_desc, valor_unitario, codigo_barras) 
+VALUES (current_time(), 'Internet', 'servico de internet disponivel para cliente', '39.99', '178378541');
+INSERT INTO detalhe (data_detalhe, serviço, detalhe_desc, valor_unitario, codigo_barras) 
+VALUES (current_time(), 'TV', 'servico de tv disponivel para cliente', '89.90', '178378941');
+INSERT INTO detalhe (data_detalhe, serviço, detalhe_desc, valor_unitario, codigo_barras) 
+VALUES (current_time(), 'TV', 'servico de tv disponivel para cliente', '89.90', '178300041');
+INSERT INTO detalhe (data_detalhe, serviço, detalhe_desc, valor_unitario, codigo_barras) 
+VALUES (current_time(), 'Internet', 'servico de internet disponivel para cliente', '152.99', '1780000041');
+INSERT INTO detalhe (data_detalhe, serviço, detalhe_desc, valor_unitario, codigo_barras) 
+VALUES (current_time(), 'Internet', 'servico de internet disponivel para cliente', '139.99', '17837845');
+INSERT INTO detalhe (data_detalhe, serviço, detalhe_desc, valor_unitario, codigo_barras) 
+VALUES (current_time(), 'Internet', 'servico de internet disponivel para cliente', '55.90', '1783740000');
+
+INSERT INTO forma_pagamento (cod_pagamento, automatico, tipo_pagamento) VALUES ('123', 'S', 'Credito');
+INSERT INTO forma_pagamento (cod_pagamento, automatico, tipo_pagamento) VALUES ('1234', 'N', 'Debito');
+INSERT INTO forma_pagamento (cod_pagamento, automatico, tipo_pagamento) VALUES ('12345', 'N', 'Debito');
+INSERT INTO forma_pagamento (cod_pagamento, automatico, tipo_pagamento) VALUES ('123457', 'S', 'Credito');
+INSERT INTO forma_pagamento (cod_pagamento, automatico, tipo_pagamento) VALUES ('123456', 'S', 'Debito');
+INSERT INTO forma_pagamento (cod_pagamento, automatico, tipo_pagamento) VALUES ('1234579', 'S', 'Credito');
+INSERT INTO forma_pagamento (cod_pagamento, automatico, tipo_pagamento) VALUES ('54321', 'S', 'Credito');
+INSERT INTO forma_pagamento (cod_pagamento, automatico, tipo_pagamento) VALUES ('654321', 'S', 'Credito');
+INSERT INTO forma_pagamento (cod_pagamento, automatico, tipo_pagamento) VALUES ('7654321', 'N', 'Debito');
+INSERT INTO forma_pagamento (cod_pagamento, automatico, tipo_pagamento) VALUES ('897456', 'N', 'Debito');
+
+UPDATE fatura SET codigo_pagamento = 123 WHERE cod_barras = '102030';
+UPDATE fatura SET codigo_pagamento = 1234 WHERE cod_barras = '10203021';
+UPDATE fatura SET codigo_pagamento = 12345 WHERE cod_barras = '1020302541';
+UPDATE fatura SET codigo_pagamento = 123457 WHERE cod_barras = '178302541';
+UPDATE fatura SET codigo_pagamento = 123456 WHERE cod_barras = '178378541';
+UPDATE fatura SET codigo_pagamento = 1234579 WHERE cod_barras = '178378941';
+UPDATE fatura SET codigo_pagamento = 54321 WHERE cod_barras = '178300041';
+UPDATE fatura SET codigo_pagamento = 654321 WHERE cod_barras = '1780000041';
+UPDATE fatura SET codigo_pagamento = 7654321 WHERE cod_barras = '17837845';
+UPDATE fatura SET codigo_pagamento = 897456 WHERE cod_barras = '1783740000';
+
+UPDATE detalhe SET detalhe_desc = 'servico de tv nao disponivel para cliente' WHERE codigo_barras = '178378941';
+UPDATE cliente SET cep = '17240-890' WHERE cod_cliente = '2';
+UPDATE cliente_email SET email = 'email10@hotmail.com' WHERE codigo_cliente = '10';
+
+DELETE FROM telefone WHERE codigo_cliente = '21';
+DELETE FROM cliente WHERE cod_cliente = '21';
+DELETE FROM desconto WHERE codigo_plano = 'pln_int300GB';
+DELETE FROM lista_ddd WHERE codigo_plano = 'pln_int300GB';
+DELETE FROM plano WHERE cod_plano = 'pln_int300GB';
+
+select cliente.cod_cliente, cliente.primeiro_nome, cliente_email.email
+from cliente, cliente_email
+where cliente.cod_cliente=cliente_email.codigo_cliente and cliente.primeiro_nome like 'J%'; 
+
+select nome, valor_desconto, codigo_plano from desconto
+where codigo_plano IN (select cod_plano from plano
+where tipo_plano = 'Internet');
+
+SELECT cliente.primeiro_nome, cliente.log, cliente.nro_residencia, telefone.ddd, telefone.fone, COALESCE (cliente.nro_residencia, 'N/A') 
+FROM cliente, telefone
+where cliente.cod_cliente = telefone.codigo_cliente;
+
+select ddd, fone, codigo_cliente from telefone
+where fone NOT IN (select terminal_cliente from assinatura
+where terminal_cliente IS NOT NULL);
+
+select nome from plano p
+where EXISTS (select * from desconto d
+where d.codigo_plano = p.cod_plano);
+
+select cod_plano, nome, tipo_plano from plano p
+where NOT EXISTS (select * from assinatura a
+where a.codigo_plano = p.cod_plano);
+
+SELECT cod_barras, data_fechamento, data_vencimento, codigo_assinatura
+FROM fatura
+WHERE cod_barras = ANY
+(SELECT codigo_barras
+FROM detalhe
+WHERE valor_unitario > 100.00);
+
+SELECT cod_plano, nome, tipo_plano, descricao, plano_status
+FROM plano
+WHERE cod_plano = SOME
+(SELECT codigo_plano
+FROM desconto
+WHERE valor_desconto > 7.00);
+
+SELECT cod_plano, nome, tipo_plano
+FROM plano
+WHERE cod_plano = ALL
+(SELECT codigo_plano
+FROM desconto
+WHERE valor_desconto is null);
+
+SELECT COUNT(c.cod_cliente), c.pais, t.cod_pais
+FROM cliente c, telefone t
+WHERE c.cod_cliente = t.codigo_cliente
+GROUP BY c.pais
+HAVING COUNT(c.cod_cliente) > 1;
+
+SELECT p.tipo_plano, sum(d.valor_desconto) as valor_total_desc
+FROM plano p, desconto d
+where p.tipo_plano = 'Internet' and p.cod_plano = d.codigo_plano;
+
+SELECT p.tipo_plano, ROUND(avg(d.valor_desconto),2) as valor_medio_desc
+FROM plano p, desconto d
+where p.tipo_plano = 'Internet' and p.cod_plano = d.codigo_plano;
+
+SELECT fatura.cod_barras, detalhe.valor_unitario, detalhe.serviço, assinatura.ddd_cliente, assinatura.terminal_cliente
+FROM fatura, detalhe, assinatura
+WHERE detalhe.codigo_barras = fatura.cod_barras and fatura.codigo_assinatura = assinatura.cod_assinatura and valor_unitario=(select max(valor_unitario) from detalhe);
+
+SELECT f.cod_barras, d.valor_unitario, d.serviço, a.ddd_cliente, a.terminal_cliente
+FROM fatura f, detalhe d, assinatura a
+WHERE d.codigo_barras = f.cod_barras and f.codigo_assinatura = a.cod_assinatura and valor_unitario=(select min(valor_unitario) from detalhe);
+
+SELECT c.primeiro_nome, c.sobrenome, c.cidade, c.estado, c.pais, t.ddd, t.fone
+FROM cliente c JOIN telefone t
+ON t.codigo_cliente = c.cod_cliente;
+
+SELECT p.nome AS nome_plano, d.nome AS nome_desconto
+FROM plano p LEFT OUTER JOIN desconto d
+ON p.cod_plano = d.codigo_plano;
+
+SELECT c.primeiro_nome, c.sobrenome, ce.email
+FROM cliente_email ce RIGHT OUTER JOIN cliente c
+ON ce.codigo_cliente = c.cod_cliente;
+
+SELECT * FROM cliente
+LEFT JOIN telefone ON cliente.cod_cliente = telefone.codigo_cliente
+UNION
+SELECT * FROM cliente
+RIGHT JOIN telefone ON cliente.cod_cliente = telefone.codigo_cliente;
+
+SELECT d.nome, COUNT(d.nome)
+FROM plano p, desconto d
+WHERE p.cod_plano = d.codigo_plano
+GROUP BY d.nome;
+
+SELECT COUNT(c.cod_cliente), c.pais, t.cod_pais
+FROM cliente c JOIN telefone t
+ON c.cod_cliente = t.codigo_cliente
+GROUP BY c.pais
+HAVING COUNT(c.cod_cliente) > 0;
